@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Başlıq Siyahısı</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
+    button { padding: 10px 20px; margin-right: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+    .error { color: red; }
+  </style>
+</head>
+<body>
+  <h2>YouTube Linklərindən Başlıq Siyahısı</h2>
+  <textarea id="urlInput" placeholder="Hər sətrə bir YouTube linki yazın..."></textarea><br>
+  <button onclick="getTitles()">Başlıqları Göstər</button>
+  <button onclick="downloadList()">Siyahını Yüklə (CSV)</button>
+
+  <table id="resultsTable">
+    <thead>
+      <tr><th>#</th><th>URL</th><th>Başlıq</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+    async function getTitles() {
+      const input = document.getElementById('urlInput').value.trim().split('\n');
+      const tbody = document.querySelector('#resultsTable tbody');
+      tbody.innerHTML = '';
+
+      for (let i = 0; i < input.length; i++) {
+        const url = input[i].trim();
+        if (!url) continue;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${i + 1}</td><td>${url}</td><td>Yüklənir...</td>`;
+        tbody.appendChild(row);
+
+        const videoIdMatch = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        if (!videoIdMatch) {
+          row.cells[2].innerHTML = '<span class="error">❌ Link düzgün deyil</span>';
+          continue;
+        }
+
+        const videoId = videoIdMatch[1];
+        const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+
+        try {
+          const res = await fetch(oembedUrl);
+          const data = await res.json();
+          row.cells[2].textContent = data.title;
+        } catch {
+          row.cells[2].innerHTML = '<span class="error">❌ Başlıq tapılmadı</span>';
+        }
+      }
+    }
+
+    function downloadList() {
+      const rows = document.querySelectorAll('#resultsTable tbody tr');
+      let csv = 'No,URL,Başlıq\n';
+      rows.forEach(row => {
+        const cols = row.querySelectorAll('td');
+        const line = Array.from(cols).map(td => '"' + td.textContent.replace(/"/g, '""') + '"').join(',');
+        csv += line + '\n';
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'youtube_basliqlar.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  </script>
+</body>
+</html>
