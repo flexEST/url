@@ -62,11 +62,11 @@
           const res = await fetch(oembedUrl);
           const data = await res.json();
           row.cells[2].textContent = data.title;
+
+          // Download düyməsi şəkli fetch edib Blob kimi yükləyəcək
           row.cells[3].innerHTML = `
-            <a href="${thumbnailUrl}" download>
-              <img src="${thumbnailUrl}" class="thumbnail" alt="thumbnail" />
-            </a>
-            <a href="${thumbnailUrl}" download class="download-link">Dowloand sekil</a>
+            <img src="${thumbnailUrl}" class="thumbnail" alt="thumbnail" />
+            <a href="#" class="download-link" onclick="downloadImage(event, '${thumbnailUrl}', '${videoId}.jpg')">Download</a>
           `;
         } catch {
           row.cells[2].innerHTML = '<span class="error">❌ Başlıq tapılmadı</span>';
@@ -74,11 +74,29 @@
       }
     }
 
+    function downloadImage(e, url, filename) {
+      e.preventDefault();
+      fetch(url)
+        .then(response => response.blob())
+        .then(blob => {
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(blobUrl);
+        })
+        .catch(() => alert('Şəkil yüklənmədi.'));
+    }
+
     function downloadList() {
       const rows = document.querySelectorAll('#resultsTable tbody tr');
       let csv = 'No,URL,Başlıq,ThumbnailURL\n';
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
+        // Yalnız thumbnail URL-ni əlavə edirik, görünməzdir
         const thumbImg = cols[3].querySelector('img');
         const thumbUrl = thumbImg ? thumbImg.src : '';
         const line = `"${cols[0].textContent}","${cols[1].textContent}","${cols[2].textContent}","${thumbUrl}"`;
