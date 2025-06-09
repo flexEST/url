@@ -2,82 +2,327 @@
 <html lang="az">
 <head>
   <meta charset="UTF-8" />
-  <title>YouTube Başlıq Siyahısı</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Youtube Sağlıqçı Siyahısı | Modern</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    textarea { width: 100%; height: 100px; margin-bottom: 10px; }
-    button { padding: 10px 20px; margin-right: 10px; cursor: pointer; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
-    th { background-color: #f4f4f4; }
-    .error { color: red; }
-    img.thumbnail { max-width: 120px; height: auto; vertical-align: middle; display: block; }
-    a.download-link {
-      font-size: 13px;
-      text-decoration: none;
-      color: blue;
-      cursor: pointer;
-      display: inline-block;
-      margin-top: 4px;
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #f8fafc;
+      color: #1e293b;
+    }
+    .gradient-bg {
+      background: linear-gradient(135deg, #f43f5e 0%, #8b5cf6 100%);
+    }
+    .thumbnail-container {
+      transition: all 0.3s ease;
+    }
+    .thumbnail-container:hover {
+      transform: scale(1.05);
+    }
+    .glow {
+      box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
+    }
+    #urlInput:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+    }
+    .loading-spinner {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
   </style>
 </head>
-<body>
-  <h2>YouTube Linklərindən Başlıq Siyahısı</h2>
-  <textarea id="urlInput" placeholder="Hər sətrə bir YouTube linki yazın..."></textarea><br />
-  <button onclick="getTitles()">Başlıqları Göstər</button>
-  <button onclick="downloadList()">Siyahını Yüklə (CSV)</button>
+<body class="min-h-screen">
+  <div class="gradient-bg text-white py-8 px-4 shadow-lg">
+    <div class="container mx-auto max-w-6xl">
+      <div class="flex flex-col md:flex-row justify-between items-center">
+        <div class="mb-6 md:mb-0">
+          <h1 class="text-3xl md:text-4xl font-bold mb-2 flex items-center">
+            <i class="fab fa-youtube mr-3"></i> YouTube Başlıq Extractoru
+          </h1>
+          <p class="opacity-90">Hər sətrə bir YouTube linki daxil edin və başlıqları avtomatik əldə edin</p>
+        </div>
+        <div class="flex items-center space-x-4">
+          <button onclick="showHelp()" class="bg-white text-pink-600 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition flex items-center">
+            <i class="fas fa-question-circle mr-2"></i> Kömək
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <table id="resultsTable">
-    <thead>
-      <tr><th>#</th><th>URL</th><th>Başlıq</th><th>Thumbnail</th></tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+  <main class="container mx-auto max-w-6xl px-4 py-8">
+    <div class="bg-white rounded-xl shadow-lg overflow-hidden mb-8">
+      <div class="p-6">
+        <label for="urlInput" class="block text-lg font-medium text-gray-700 mb-2">
+          YouTube Linkləri
+        </label>
+        <textarea 
+          id="urlInput" 
+          placeholder="Hər sətrə bir YouTube linki yazın...
+  Məsələn:
+  https://www.youtube.com/watch?v=dQw4w9WgXcQ
+  https://youtu.be/dQw4w9WgXcQ" 
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition duration-200 mb-4 h-40"
+        ></textarea>
+        
+        <div class="flex flex-wrap gap-3">
+          <button 
+            onclick="getTitles()" 
+            class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-medium transition flex items-center"
+          >
+            <i class="fas fa-list-ol mr-2"></i> Başlıqları Göstər
+          </button>
+          <button 
+            onclick="downloadList()" 
+            id="downloadBtn" 
+            class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition flex items-center"
+            disabled
+          >
+            <i class="fas fa-file-csv mr-2"></i> CSV Yüklə
+          </button>
+          <button 
+            onclick="clearAll()" 
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-6 py-3 rounded-lg font-medium transition flex items-center"
+          >
+            <i class="fas fa-trash-alt mr-2"></i> Təmizlə
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="resultsContainer" class="bg-white rounded-xl shadow-lg overflow-hidden hidden">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-gray-800">Nəticələr</h2>
+          <div class="text-gray-500" id="resultCount">0 video tapıldı</div>
+        </div>
+        
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Başlıq</th>
+                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thumbnail</th>
+              </tr>
+            </thead>
+            <tbody id="resultsTable" class="bg-white divide-y divide-gray-200"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="bg-white p-8 rounded-lg text-center max-w-md mx-4">
+        <div class="loading-spinner text-purple-600 text-4xl mb-4">
+          <i class="fas fa-spinner"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-2">Başlıqlar yüklənir...</h3>
+        <p class="text-gray-600" id="progressText">0 / 0 başa çatdı</p>
+      </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div id="helpModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div class="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div class="p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-xl font-bold text-gray-800">Kömək və İstifadə Qaydası</h3>
+            <button onclick="hideHelp()" class="text-gray-400 hover:text-gray-500">
+              <i class="fas fa-times text-xl"></i>
+            </button>
+          </div>
+          
+          <div class="space-y-4 text-gray-700">
+            <div class="p-4 bg-purple-50 rounded-lg">
+              <h4 class="font-semibold text-purple-800 mb-2"><i class="fas fa-info-circle mr-2"></i> Necə İstifadə Etməli?</h4>
+              <ol class="list-decimal pl-5 space-y-2">
+                <li>YouTube video linklərini yuxarıdakı sahəyə daxil edin (hər sətrə bir link)</li>
+                <li>"Başlıqları Göstər" düyməsini basın</li>
+                <li>Nəticələr cədvəldə görünəcək</li>
+                <li>İstəsəniz, nəticələri CSV faylına yükləyə bilərsiniz</li>
+              </ol>
+            </div>
+            
+            <div>
+              <h4 class="font-semibold mb-2"><i class="fas fa-link mr-2"></i> Dəstəklənən Link Formatları</h4>
+              <ul class="list-disc pl-5 space-y-1">
+                <li>https://www.youtube.com/watch?v=dQw4w9WgXcQ</li>
+                <li>https://youtu.be/dQw4w9WgXcQ</li>
+                <li>https://youtube.com/shorts/dQw4w9WgXcQ?feature=share</li>
+              </ul>
+            </div>
+            
+            <div class="p-4 bg-yellow-50 rounded-lg">
+              <h4 class="font-semibold text-yellow-800 mb-2"><i class="fas fa-exclamation-triangle mr-2"></i> Əhəmiyyətli Qeyd</h4>
+              <p>Bəzi videolar API məhdudiyyətlərinə görə başlıq göstərməyə bilər. Bu halda, "Başlıq tapılmadı" xətası alacaqsınız.</p>
+            </div>
+          </div>
+          
+          <div class="mt-6 pt-4 border-t border-gray-200">
+            <button onclick="hideHelp()" class="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded-lg font-medium transition">
+              Başa düşdüm, təşəkkürlər!
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="bg-gray-100 py-6 mt-12">
+    <div class="container mx-auto max-w-6xl px-4 text-center text-gray-600">
+      <p>Bu alət YouTube-dan video başlıqlarını çıxarmaq üçün yaradılıb. Heç bir video saxlanılmır.</p>
+      <p class="mt-2">© 2023 YouTube Başlıq Extractoru | Bütün hüquqlar qorunur.</p>
+    </div>
+  </footer>
 
   <script>
     async function getTitles() {
-      const input = document.getElementById('urlInput').value.trim().split('\n');
-      const tbody = document.querySelector('#resultsTable tbody');
+      const input = document.getElementById('urlInput').value.trim();
+      if (!input) {
+        showToast('Xahiş edirik ən azı bir YouTube linki daxil edin', 'error');
+        return;
+      }
+      
+      const urls = input.split('\n').filter(url => url.trim());
+      const resultsContainer = document.getElementById('resultsContainer');
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const progressText = document.getElementById('progressText');
+      const tbody = document.querySelector('#resultsTable');
+      
+      // Show loading
+      loadingIndicator.classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+      resultsContainer.classList.add('hidden');
       tbody.innerHTML = '';
-
-      for (let i = 0; i < input.length; i++) {
-        const url = input[i].trim();
+      
+      let successCount = 0;
+      let processed = 0;
+      
+      // Show initial progress
+      progressText.textContent = `0 / ${urls.length} başa çatdı`;
+      
+      for (let i = 0; i < urls.length; i++) {
+        const url = urls[i].trim();
         if (!url) continue;
-
+        
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${i + 1}</td><td>${url}</td><td>Yüklənir...</td><td></td>`;
+        row.className = 'hover:bg-gray-50 transition';
+        row.innerHTML = `
+          <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${i + 1}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate">${url}</td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+            <div class="flex items-center">
+              <i class="fas fa-spinner fa-spin text-purple-500 mr-2"></i>
+              <span>Yüklənir...</span>
+            </div>
+          </td>
+          <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500"></td>
+        `;
         tbody.appendChild(row);
-
-        // Video ID çıxarmaq
-        const videoIdMatch = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+        
+        // Extract video ID
+        const videoIdMatch = url.match(/(?:v=|youtu\.be\/|shorts\/)([a-zA-Z0-9_-]{11})/);
         if (!videoIdMatch) {
-          row.cells[2].innerHTML = '<span class="error">❌ Link düzgün deyil</span>';
+          row.children[2].innerHTML = `
+            <div class="text-red-500 flex items-center">
+              <i class="fas fa-exclamation-circle mr-2"></i>
+              <span>Link düzgün deyil</span>
+            </div>
+          `;
+          processed++;
+          progressText.textContent = `${processed} / ${urls.length} başa çatdı`;
           continue;
         }
-
+        
         const videoId = videoIdMatch[1];
         const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
-        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+        
         try {
           const res = await fetch(oembedUrl);
           if (!res.ok) throw new Error('Başlıq tapılmadı');
           const data = await res.json();
-          row.cells[2].textContent = data.title;
-
-          // Thumbnail və download linki
-          row.cells[3].innerHTML = `
-            <img src="${thumbnailUrl}" class="thumbnail" alt="thumbnail" />
-            <a href="#" onclick="downloadImage('${thumbnailUrl}', 'thumbnail_${videoId}.jpg'); return false;" class="download-link">Download</a>
+          
+          // Update row with success
+          row.children[2].innerHTML = `
+            <span class="text-gray-800 font-medium">${data.title}</span>
           `;
+          
+          // Update thumbnail cell
+          row.children[3].innerHTML = `
+            <div class="thumbnail-container">
+              <div class="relative group">
+                <img src="${thumbnailUrl}" class="w-32 h-20 rounded-md object-cover border border-gray-200" 
+                  alt="thumbnail" onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'" />
+                <div class="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                  <button onclick="downloadImage('${thumbnailUrl}', 'thumbnail_${videoId}.jpg')" class="bg-white text-purple-600 p-2 rounded-full hover:bg-purple-100 transition">
+                    <i class="fas fa-download"></i>
+                  </button>
+                </div>
+              </div>
+              <span class="block text-xs text-gray-500 mt-1">${videoId}</span>
+            </div>
+          `;
+          
+          successCount++;
         } catch {
-          row.cells[2].innerHTML = '<span class="error">❌ Başlıq tapılmadı</span>';
+          // Update row with error
+          row.children[2].innerHTML = `
+            <div class="text-red-500 flex items-center">
+              <i class="fas fa-exclamation-triangle mr-2"></i>
+              <span>Başlıq tapılmadı</span>
+            </div>
+          `;
+          
+          // Still try to show thumbnail
+          row.children[3].innerHTML = `
+            <div class="thumbnail-container">
+              <div class="relative">
+                <img src="https://img.youtube.com/vi/${videoId}/hqdefault.jpg" class="w-32 h-20 rounded-md object-cover border border-gray-200 opacity-75" alt="thumbnail" />
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="bg-red-500 text-white text-xs px-2 py-1 rounded">Error</span>
+                </div>
+              </div>
+              <span class="block text-xs text-gray-500 mt-1">${videoId}</span>
+            </div>
+          `;
         }
+        
+        processed++;
+        progressText.textContent = `${processed} / ${urls.length} başa çatdı`;
+      }
+      
+      // Hide loading and show results
+      loadingIndicator.classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+      resultsContainer.classList.remove('hidden');
+      
+      // Update result count
+      document.getElementById('resultCount').textContent = `${successCount} video başarılı, ${urls.length} ümumi`;
+      
+      // Enable download button if there are results
+      document.getElementById('downloadBtn').disabled = successCount === 0;
+      
+      if (successCount > 0) {
+        showToast(`${successCount} video başlığı uğurla yükləndi`, 'success');
+      } else {
+        showToast('Heç bir başlıq yüklənə bilmədi', 'error');
       }
     }
-
+    
     function downloadImage(url, filename) {
+      showToast('Thumbnail yüklənir...', 'info');
+      
       fetch(url)
         .then(resp => resp.blob())
         .then(blob => {
@@ -90,29 +335,114 @@
           a.click();
           window.URL.revokeObjectURL(blobUrl);
           a.remove();
+          showToast('Thumbnail uğurla yükləndi', 'success');
         })
-        .catch(() => alert('Şəkil yüklənmədi, zəhmət olmasa yenidən cəhd et.'));
+        .catch(() => {
+          showToast('Şəkil yüklənmədi, zəhmət olmasa yenidən cəhd edin', 'error');
+        });
     }
-
+    
     function downloadList() {
-      const rows = document.querySelectorAll('#resultsTable tbody tr');
-      let csv = 'No,URL,Başlıq\n';  // Thumbnail CSV-də yoxdur!
+      const rows = document.querySelectorAll('#resultsTable tr');
+      if (rows.length === 0) {
+        showToast('Yükləmək üçün heç bir məlumat yoxdur', 'error');
+        return;
+      }
+      
+      let csv = 'No,URL,Başlıq\n';
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
-        // Başlıqda vergül ola bilər, ona görə " ilə əhatə edirik
         const line = `"${cols[0].textContent}","${cols[1].textContent}","${cols[2].textContent.replace(/"/g, '""')}"`;
         csv += line + '\n';
       });
-
+      
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'youtube_basliqlar.csv';
+      a.download = `youtube_basliqlar_${new Date().toISOString().slice(0,10)}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      
+      showToast('CSV faylı uğurla yükləndi', 'success');
+    }
+    
+    function clearAll() {
+      document.getElementById('urlInput').value = '';
+      document.getElementById('resultsContainer').classList.add('hidden');
+      document.getElementById('downloadBtn').disabled = true;
+      document.querySelector('#resultsTable').innerHTML = '';
+      showToast('Bütün məlumatlar təmizləndi', 'info');
+    }
+    
+    function showHelp() {
+      document.getElementById('helpModal').classList.remove('hidden');
+      document.body.classList.add('overflow-hidden');
+    }
+    
+    function hideHelp() {
+      document.getElementById('helpModal').classList.add('hidden');
+      document.body.classList.remove('overflow-hidden');
+    }
+    
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      const colors = {
+        info: 'bg-blue-500',
+        success: 'bg-green-500',
+        error: 'bg-red-500',
+        warning: 'bg-yellow-500'
+      };
+      
+      toast.className = `fixed bottom-4 right-4 text-white ${colors[type] || colors.info} px-6 py-3 rounded-lg shadow-lg flex items-center animate-fade-in z-50`;
+      toast.innerHTML = `
+        <i class="fas ${type === 'info' ? 'fa-info-circle' : type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+        <span>${message}</span>
+      `;
+      
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('animate-fade-in');
+        toast.classList.add('animate-fade-out');
+        setTimeout(() => toast.remove(), 300);
+      }, 5000);
+    }
+    
+    // Add event listeners for better UX
+    document.addEventListener('DOMContentLoaded', () => {
+      // Press Enter in textarea to submit
+      document.getElementById('urlInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && e.ctrlKey) {
+          getTitles();
+        }
+      });
+      
+      // Add dark mode toggle (bonus feature)
+      const darkModeToggle = document.createElement('button');
+      darkModeToggle.className = 'fixed bottom-4 left-4 bg-gray-800 text-white p-3 rounded-full shadow-lg z-50 hover:bg-gray-700 transition';
+      darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+      darkModeToggle.title = 'Dark Mode';
+      darkModeToggle.onclick = toggleDarkMode;
+      document.body.appendChild(darkModeToggle);
+      
+      // Check for saved preference
+      if (localStorage.getItem('darkMode') === 'true') {
+        document.documentElement.classList.add('dark');
+        darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+      }
+    });
+    
+    function toggleDarkMode() {
+      const html = document.documentElement;
+      html.classList.toggle('dark');
+      const isDark = html.classList.contains('dark');
+      localStorage.setItem('darkMode', isDark);
+      
+      const darkModeToggle = document.querySelector('button[title="Dark Mode"]');
+      darkModeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
     }
   </script>
 </body>
