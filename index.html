@@ -11,13 +11,14 @@
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
     th { background-color: #f4f4f4; }
     .error { color: red; }
-    img.thumbnail { max-width: 120px; height: auto; vertical-align: middle; }
+    img.thumbnail { max-width: 120px; height: auto; vertical-align: middle; display: block; }
     a.download-link {
-      margin-left: 8px;
-      font-size: 14px;
+      font-size: 13px;
       text-decoration: none;
       color: blue;
       cursor: pointer;
+      display: inline-block;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -63,10 +64,10 @@
           const data = await res.json();
           row.cells[2].textContent = data.title;
 
-          // Download düyməsi şəkli fetch edib Blob kimi yükləyəcək
+          // Thumbnail + download link
           row.cells[3].innerHTML = `
             <img src="${thumbnailUrl}" class="thumbnail" alt="thumbnail" />
-            <a href="#" class="download-link" onclick="downloadImage(event, '${thumbnailUrl}', '${videoId}.jpg')">Download</a>
+            <a href="${thumbnailUrl}" download="thumbnail_${videoId}.jpg" class="download-link">Download</a>
           `;
         } catch {
           row.cells[2].innerHTML = '<span class="error">❌ Başlıq tapılmadı</span>';
@@ -74,32 +75,12 @@
       }
     }
 
-    function downloadImage(e, url, filename) {
-      e.preventDefault();
-      fetch(url)
-        .then(response => response.blob())
-        .then(blob => {
-          const blobUrl = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = blobUrl;
-          a.download = filename;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(blobUrl);
-        })
-        .catch(() => alert('Şəkil yüklənmədi.'));
-    }
-
     function downloadList() {
       const rows = document.querySelectorAll('#resultsTable tbody tr');
-      let csv = 'No,URL,Başlıq,ThumbnailURL\n';
+      let csv = 'No,URL,Başlıq\n';  // Thumbnail CSV-də yoxdur!
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
-        // Yalnız thumbnail URL-ni əlavə edirik, görünməzdir
-        const thumbImg = cols[3].querySelector('img');
-        const thumbUrl = thumbImg ? thumbImg.src : '';
-        const line = `"${cols[0].textContent}","${cols[1].textContent}","${cols[2].textContent}","${thumbUrl}"`;
+        const line = `"${cols[0].textContent}","${cols[1].textContent}","${cols[2].textContent}"`;
         csv += line + '\n';
       });
 
