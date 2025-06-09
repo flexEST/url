@@ -1,27 +1,35 @@
 <!DOCTYPE html>
 <html lang="az">
 <head>
-  <meta charset="UTF-8">
-  <title>Title siyahısı</title>
+  <meta charset="UTF-8" />
+  <title>YouTube Başlıq Siyahısı</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; }
     textarea { width: 100%; height: 100px; margin-bottom: 10px; }
     button { padding: 10px 20px; margin-right: 10px; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; vertical-align: top; }
     th { background-color: #f4f4f4; }
     .error { color: red; }
+    img.thumbnail { max-width: 120px; height: auto; vertical-align: middle; }
+    a.download-link {
+      margin-left: 8px;
+      font-size: 14px;
+      text-decoration: none;
+      color: blue;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h2>Title sıyahısı</h2>
-  <textarea id="urlInput" placeholder="Hər sətrə bir YouTube linki yazın..."></textarea><br>
+  <h2>YouTube Linklərindən Başlıq Siyahısı</h2>
+  <textarea id="urlInput" placeholder="Hər sətrə bir YouTube linki yazın..."></textarea><br />
   <button onclick="getTitles()">Başlıqları Göstər</button>
   <button onclick="downloadList()">Siyahını Yüklə (CSV)</button>
 
   <table id="resultsTable">
     <thead>
-      <tr><th>#</th><th>URL</th><th>Başlıq</th></tr>
+      <tr><th>#</th><th>URL</th><th>Başlıq</th><th>Thumbnail</th></tr>
     </thead>
     <tbody></tbody>
   </table>
@@ -37,7 +45,7 @@
         if (!url) continue;
 
         const row = document.createElement('tr');
-        row.innerHTML = `<td>${i + 1}</td><td>${url}</td><td>Yüklənir...</td>`;
+        row.innerHTML = `<td>${i + 1}</td><td>${url}</td><td>Yüklənir...</td><td></td>`;
         tbody.appendChild(row);
 
         const videoIdMatch = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -48,11 +56,18 @@
 
         const videoId = videoIdMatch[1];
         const oembedUrl = `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`;
+        const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
         try {
           const res = await fetch(oembedUrl);
           const data = await res.json();
           row.cells[2].textContent = data.title;
+          row.cells[3].innerHTML = `
+            <a href="${thumbnailUrl}" download>
+              <img src="${thumbnailUrl}" class="thumbnail" alt="thumbnail" />
+            </a>
+            <a href="${thumbnailUrl}" download class="download-link">Download</a>
+          `;
         } catch {
           row.cells[2].innerHTML = '<span class="error">❌ Başlıq tapılmadı</span>';
         }
@@ -61,10 +76,12 @@
 
     function downloadList() {
       const rows = document.querySelectorAll('#resultsTable tbody tr');
-      let csv = 'No,URL,Başlıq\n';
+      let csv = 'No,URL,Başlıq,ThumbnailURL\n';
       rows.forEach(row => {
         const cols = row.querySelectorAll('td');
-        const line = Array.from(cols).map(td => '"' + td.textContent.replace(/"/g, '""') + '"').join(',');
+        const thumbImg = cols[3].querySelector('img');
+        const thumbUrl = thumbImg ? thumbImg.src : '';
+        const line = `"${cols[0].textContent}","${cols[1].textContent}","${cols[2].textContent}","${thumbUrl}"`;
         csv += line + '\n';
       });
 
